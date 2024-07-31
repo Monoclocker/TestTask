@@ -1,9 +1,7 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using TestTask.BusinessLogicLayer.DTOs;
 using TestTask.BusinessLogicLayer.Exceptions;
 using TestTask.BusinessLogicLayer.Interfaces;
-using TestTask.DataAccessLayer.Entities;
 using TestTask.PresentationLayer.DTOs;
 
 namespace TestTask.PresentationLayer.Controllers
@@ -23,7 +21,7 @@ namespace TestTask.PresentationLayer.Controllers
         /// Получение результата JOIN-запроса с поддержкой пагинации
         /// </summary>
         /// <param name="page">Номер возвращаемой страницы</param>
-        /// <param name="name">Имя продукта, используемое при поиске</param>
+        /// <param name="categoryName">Имя категории, используемое при поиске</param>
         /// <remarks>
         /// Примерный вид результата:
         /// 
@@ -54,7 +52,7 @@ namespace TestTask.PresentationLayer.Controllers
         [HttpGet]
         [ProducesResponseType(typeof(IEnumerable<ProductJoinDTO>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> GetProducts([FromQuery] int? page, string? name)
+        public async Task<IActionResult> GetProducts([FromQuery]string? categoryName, int? page=1)
         {
             if (page <= 0)
             {
@@ -63,9 +61,9 @@ namespace TestTask.PresentationLayer.Controllers
 
             IEnumerable<ProductJoinDTO> products = await productService.GetProducts((int)page!);
 
-            if (name is not null)
+            if (categoryName is not null)
             {
-                products = products.Where(x => x.Name == name);
+                products = products.Where(x => x.CategoryName == categoryName);
             }
 
             return Ok(products);
@@ -109,13 +107,21 @@ namespace TestTask.PresentationLayer.Controllers
         /// 
         /// </remarks>
         /// <response code="200">Запись создана</response>
+        /// <response code="400">Неправильный запрос</response>
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ErrorDTO), StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> CreateProduct(ProductEditDTO dto)
         {
-            await productService.CreateProduct(dto);
-
-            return Ok();
+            try
+            {
+                await productService.CreateProduct(dto);
+                return Ok();
+            }
+            catch (UnknownEntityException ex)
+            {
+                return BadRequest(new ErrorDTO { Error = ex.Message });
+            }
         }
 
         /// <summary>
@@ -134,10 +140,10 @@ namespace TestTask.PresentationLayer.Controllers
         ///     }
         /// </remarks>
         /// <response code="200">Продукт обновлён</response>
-        /// <response code="404">Обновляемый продукт не найден</response>
+        /// <response code="400">Обновляемый продукт не найден</response>
         [HttpPut("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(ErrorDTO), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ErrorDTO), StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> UpdateProduct(int id, [FromBody] ProductEditDTO dto)
         {
             try
@@ -147,7 +153,7 @@ namespace TestTask.PresentationLayer.Controllers
             }
             catch (UnknownEntityException ex)
             {
-                return NotFound(new ErrorDTO { Error = ex.Message });
+                return BadRequest(new ErrorDTO { Error = ex.Message });
             }
         }
 

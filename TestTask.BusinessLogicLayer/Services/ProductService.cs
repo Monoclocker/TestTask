@@ -70,6 +70,11 @@ namespace TestTask.BusinessLogicLayer.Services
 
         public async Task CreateProduct(ProductEditDTO productDTO)
         {
+            if(Context.Categories.Get(productDTO.CategoryId) is null)
+            {
+                await Task.FromException(new UnknownEntityException("Unknown Category"));
+            }
+
             Context.Products.Create(new Product()
             {
                 Name = productDTO.Name,
@@ -86,6 +91,11 @@ namespace TestTask.BusinessLogicLayer.Services
 
             if (productForUpdate is null)
                 await Task.FromException(new UnknownEntityException("Unknown Product"));
+
+            if (Context.Categories.Get(productDTO.CategoryId) is null)
+            {
+                await Task.FromException(new UnknownEntityException("Unknown Category"));
+            }
 
             productForUpdate!.Name = productDTO.Name;
             productForUpdate!.CategoryId = productDTO.CategoryId;
